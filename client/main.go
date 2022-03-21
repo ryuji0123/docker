@@ -1,7 +1,7 @@
 package main
 
 import (
-	"docker/client/cmd"
+	"github.com/docker/client/cmd"
 )
 
 func main() {

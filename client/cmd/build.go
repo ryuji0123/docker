@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"docker/client/cli"
+	"github.com/docker/client/cli"
 	"github.com/spf13/cobra"
 )
 

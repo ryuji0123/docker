@@ -2,9 +2,9 @@ package cli
 
 import (
 	"bytes"
-	"docker/client/opts"
 	"encoding/json"
 	"fmt"
+	"github.com/docker/client/opts"
 	"io/ioutil"
 	"net/http"
 )
