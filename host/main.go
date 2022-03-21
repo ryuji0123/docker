@@ -1,53 +1,22 @@
 package main
 
 import (
-	"docker/host/opts"
-	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"net/http"
+	"github.com/spf13/cobra"
 	"os"
 )
 
-type CmdJsonBody struct {
-	Cmd string `json:"cmd"`
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Only POST request is acceptable\n")
-		return
+func newDaemonCommand() (*cobra.Command, error) {
+	cmd := &cobra.Command{
+		Use:   "dockerd [OPTIONS]",
+		Short: "A self-sufficient runtime for containers",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			daemonCli := NewDaemonCli()
+			return daemonCli.start()
+		},
 	}
-	if r.Header.Get("Content-type") != "application/json" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Please set Content-type correctly\n")
-		return
-	}
-
-	byteArray, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	var jsonBody CmdJsonBody
-	err = json.Unmarshal(byteArray, &jsonBody)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Fprintf(w, jsonBody.Cmd+" command received\n")
-}
-
-func Log(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logrus.WithFields(logrus.Fields{
-			"addr":   r.RemoteAddr,
-			"method": r.Method,
-			"path":   r.URL.Path,
-		}).Info("request received")
-		h.ServeHTTP(w, r)
-	})
+	return cmd, nil
 }
 
 func init() {
@@ -55,10 +24,15 @@ func init() {
 }
 
 func main() {
-	router := http.NewServeMux()
-	router.HandleFunc("/commands", handler)
-	logrus.Info("start server")
-	if err := http.ListenAndServe("localhost:"+opts.DefaultHTTPPort, Log(router)); err != nil {
-		logrus.WithField("event", "start server").Fatal(err)
+	onError := func(err error) {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+	cmd, err := newDaemonCommand()
+	if err != nil {
+		onError(err)
+	}
+	if err := cmd.Execute(); err != nil {
+		onError(err)
 	}
 }
